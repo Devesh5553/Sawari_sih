@@ -57,4 +57,15 @@ export const buses = [
     location: { lat: 19.1865, lng: 73.0050 },
     estimatedJourneyMin: 15,
   },
+  {
+    id: 6,
+    route: 'TMT 62',
+    start: 'Thane Station (West)',
+    destination: 'Manpada',
+    etaMin: 11,
+    occupancy: 'Low',
+    status: 'On Time',
+    location: { lat: 19.1955, lng: 72.9755 },
+    estimatedJourneyMin: 25,
+  },
 ];

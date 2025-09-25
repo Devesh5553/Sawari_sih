@@ -8,15 +8,6 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const OccupancyPill = ({ level }) => {
-  const map = {
-    Low: 'bg-blue-50 text-blue-700',
-    Medium: 'bg-purple-50 text-purple-700',
-    High: 'bg-red-50 text-red-700',
-  };
-  return <span className={`px-2 py-0.5 rounded-full text-xs ${map[level] || 'bg-gray-100 text-gray-700'}`}>{level} occupancy</span>;
-};
-
 const BusList = ({ buses = [], isLoading }) => {
   if (isLoading) {
     return (
@@ -44,7 +35,7 @@ const BusList = ({ buses = [], isLoading }) => {
                 <div className="text-sm text-gray-600">To {bus.destination}</div>
                 <div className="flex items-center gap-2 mt-1">
                   <StatusBadge status={bus.status} />
-                  <OccupancyPill level={bus.occupancy} />
+                  
                 </div>
               </div>
             </div>
