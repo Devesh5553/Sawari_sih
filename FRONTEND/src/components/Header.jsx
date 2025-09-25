@@ -23,6 +23,8 @@ const Header = () => {
             <button className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Features</button>
             <button className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Routes</button>
             <button className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Time Table</button>
+            <Link to="/admin" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Admin</Link>
+            <Link to="/feedback" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Feedback</Link>
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
