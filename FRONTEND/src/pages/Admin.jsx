@@ -94,6 +94,10 @@ const Table = ({ columns, rows, rowKey = 'id', actions }) => (
 const Admin = () => {
   const [active, setActive] = useState('fleet');
   const [buses, setBuses] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4001';
 
   useEffect(() => {
     // Map to the app's bus schema
@@ -111,6 +115,28 @@ const Admin = () => {
     }));
     setBuses(mapped);
   }, []);
+
+  // Load passenger feedbacks when tab is active
+  useEffect(() => {
+    if (active !== 'feedback') return;
+    let ignore = false;
+    const load = async () => {
+      setLoadingFeedbacks(true);
+      setFeedbackError('');
+      try {
+        const res = await fetch(`${BACKEND_URL}/feedbacks`);
+        const data = await res.json();
+        if (!res.ok || !data?.success) throw new Error(data?.error || 'Failed to load feedbacks');
+        if (!ignore) setFeedbacks(Array.isArray(data.data) ? data.data : []);
+      } catch (err) {
+        if (!ignore) setFeedbackError(err?.message || 'Failed to load feedbacks');
+      } finally {
+        if (!ignore) setLoadingFeedbacks(false);
+      }
+    };
+    load();
+    return () => { ignore = true; };
+  }, [active, BACKEND_URL]);
 
   const fleetList = useMemo(() => buses.map(b => ({
     id: b.id,
@@ -292,27 +318,30 @@ const Admin = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <SectionCard title="Passenger Feedback" icon={MessageSquare}>
-                <Table
-                  columns={[
-                    { key: 'time', header: 'Time' },
-                    { key: 'route', header: 'Route' },
-                    { key: 'rating', header: 'Rating' },
-                    { key: 'tags', header: 'Tags' },
-                  ]}
-                  rows={[
-                    { id: 1, time: 'Today 10:12', route: '101', rating: '4★', tags: 'Punctuality, Cleanliness' },
-                    { id: 2, time: 'Today 09:08', route: '203', rating: '2★', tags: 'Driver behavior' },
-                  ]}
-                />
-              </SectionCard>
-            </div>
-            <div>
-              <SectionCard title="Actions" icon={MessageSquare}>
-                <div className="space-y-3">
-                  <button className="w-full px-4 py-2 rounded-lg bg-gray-100">Tag & Assign</button>
-                  <button className="w-full px-4 py-2 rounded-lg bg-gray-100">Escalate</button>
-                  <button className="w-full px-4 py-2 rounded-lg bg-gray-100">Export</button>
-                </div>
+                {feedbackError && (
+                  <div className="p-3 rounded bg-red-50 text-red-700 text-sm mb-3">{feedbackError}</div>
+                )}
+                {loadingFeedbacks ? (
+                  <div className="text-sm text-gray-600">Loading feedback…</div>
+                ) : feedbacks.length === 0 ? (
+                  <div className="text-sm text-gray-600">No feedback yet.</div>
+                ) : (
+                  <Table
+                    columns={[
+                      { key: 'time', header: 'Time' },
+                      { key: 'route', header: 'Route' },
+                      { key: 'rating', header: 'Rating' },
+                      { key: 'tags', header: 'Tags' },
+                    ]}
+                    rows={feedbacks.map(f => ({
+                      id: f.id,
+                      time: new Date(f.createdAt).toLocaleString(),
+                      route: f.busNumber,
+                      rating: `${f.rating}★`,
+                      tags: Array.isArray(f.categories) ? f.categories.join(', ') : '',
+                    }))}
+                  />
+                )}
               </SectionCard>
             </div>
           </div>

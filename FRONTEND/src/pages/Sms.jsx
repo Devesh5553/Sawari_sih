@@ -1,5 +1,16 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { buses } from '../data/buses';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
+const normalizePhone = (p) => {
+  const raw = (p || '').toString().trim();
+  if (!raw) return '';
+  if (raw.startsWith('+')) return raw.replace(/\s+/g, '');
+  const digits = raw.replace(/[^0-9]/g, '').replace(/^0+/, '');
+  // Default to +91 if 10-digit
+  if (digits.length === 10) return `+91${digits}`;
+  return `+${digits}`;
+};
 
 const Sms = () => {
   // Build options from buses.js
@@ -46,11 +57,11 @@ const Sms = () => {
     }
   }, [route, allStarts, allDestinations]);
 
-  const canSend = route && currentStop && destinationStop && !sending;
+  const canSend = route && currentStop && destinationStop && phone && !sending;
 
   const preview = `ETA ${route || '<route>'} ${currentStop || '<current_stop>'} ${destinationStop || '<destination_stop>'}`;
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     setSuccess('');
     setError('');
@@ -59,13 +70,33 @@ const Sms = () => {
       setError('Please fill Route, Current Stop, and Destination Stop.');
       return;
     }
+    const phoneNorm = normalizePhone(phone);
+    if (!phoneNorm) {
+      setError('Please enter a valid phone number (e.g., +91 98765 43210).');
+      return;
+    }
 
-    // Fake send
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
+    try {
+      const res = await fetch(`${BACKEND_URL}/send-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phoneNorm,
+          route,
+          currentStop,
+          destinationStop,
+          // eta is optional; omit for now
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'Failed to send SMS');
       setSuccess('SMS sent successfully!');
-    }, 800);
+    } catch (err) {
+      setError(err?.message || 'Failed to send SMS');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -127,9 +158,9 @@ const Sms = () => {
               </select>
             </div>
 
-            {/* Phone (optional) */}
+            {/* Phone (required) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone (optional)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
               <input
                 type="tel"
                 inputMode="tel"

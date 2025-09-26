@@ -8,6 +8,7 @@ import { Bus, MapPin, Clock, Smartphone, BarChart3, Shield } from 'lucide-react'
 import DeviceMockup from './components/DeviceMockup';
 import { buses as allBuses } from './data/buses';
 import LocationPrompt from './components/LocationPrompt';
+import MobileNav from './components/MobileNav';
 
 function App() {
   const [selectedRoute, setSelectedRoute] = useState('');
@@ -90,7 +91,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-16">
       <Header />
 
       <LocationPrompt open={showLocationPrompt} onAllow={onAllowLocation} onDeny={onDenyLocation} />
@@ -193,6 +194,7 @@ function App() {
           </div>
         </div>
       </section>
+      <MobileNav />
     </div>
   );
 }

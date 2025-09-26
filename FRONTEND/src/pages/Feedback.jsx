@@ -15,6 +15,25 @@ const Feedback = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpSuccess, setOtpSuccess] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+  const normalizePhone = (p) => {
+    const raw = (p || '').toString().trim();
+    if (!raw) return '';
+    if (raw.startsWith('+')) return raw.replace(/\s+/g, '');
+    const digits = raw.replace(/[^0-9]/g, '').replace(/^0+/, '');
+    if (digits.length === 10) return `+91${digits}`; // default to +91 for 10-digit
+    return `+${digits}`;
+  };
 
   // Auto-fill current date and time
   useEffect(() => {
@@ -71,9 +90,74 @@ const Feedback = () => {
     }
   };
 
+  const handleSendOtp = async () => {
+    setOtpError('');
+    setOtpSuccess('');
+    setOtpVerified(false);
+    const phoneNorm = normalizePhone(phone);
+    if (!phoneNorm) {
+      setOtpError('Please enter a phone number');
+      return;
+    }
+    setSendingOtp(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneNorm }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'Failed to send OTP');
+      setOtpSent(true);
+      setOtpSuccess('OTP sent successfully');
+    } catch (err) {
+      setOtpError(err?.message || 'Failed to send OTP');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setOtpError('');
+    setOtpSuccess('');
+    const phoneNorm = normalizePhone(phone);
+    if (!phoneNorm || !otp.trim()) {
+      setOtpError('Enter phone and OTP');
+      return;
+    }
+    setVerifyingOtp(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneNorm, code: otp.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'Invalid OTP');
+      setOtpVerified(true);
+      setOtpSuccess('Phone verified');
+    } catch (err) {
+      setOtpError(err?.message || 'OTP verification failed');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     setIsSubmitting(true);
+    // Mandatory checks
+    if (!otpVerified) {
+      setIsSubmitting(false);
+      setFormError('Please verify your phone via OTP before submitting.');
+      return;
+    }
+    if (!formData.photo) {
+      setIsSubmitting(false);
+      setFormError('Please upload your ticket image/screenshot before submitting.');
+      return;
+    }
 
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -265,12 +349,11 @@ const Feedback = () => {
                 Optional: Tell us more about your experience
               </p>
             </div>
-
-            {/* Photo Upload */}
+            {/* Ticket Photo / Screenshot Upload (Required) */}
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
                 <Upload className="w-4 h-4 inline mr-1" />
-                Photo Evidence (Optional)
+                Ticket Image or Screenshot (Required)
               </label>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                 <input
@@ -290,20 +373,76 @@ const Feedback = () => {
                   ) : (
                     <div className="text-gray-500">
                       <Upload className="w-8 h-8 mx-auto mb-2" />
-                      <p className="font-medium">Upload a photo</p>
-                      <p className="text-sm">Cleanliness, damaged seats, etc.</p>
+                      <p className="font-medium">Upload your ticket image</p>
+                      <p className="text-sm">This is required to submit feedback</p>
                     </div>
                   )}
                 </label>
               </div>
+              {formData.photo && (
+                <div className="mt-2 text-xs text-gray-600">Selected: {Math.round(formData.photo.size / 1024)} KB</div>
+              )}
+            </div>
+
+            {/* Phone Verification (OTP) - Required */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">Verify Phone (Required)</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                <div className="md:col-span-2">
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="e.g. +91 98765 43210"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={sendingOtp}
+                    className={`px-4 py-3 rounded-lg text-white text-sm font-semibold ${sendingOtp ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  >
+                    {sendingOtp ? 'Sending…' : (otpSent ? 'Resend OTP' : 'Send OTP')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={verifyingOtp || !otpSent}
+                    className={`px-4 py-3 rounded-lg text-white text-sm font-semibold ${verifyingOtp || !otpSent ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
+                  >
+                    {verifyingOtp ? 'Verifying…' : 'Verify'}
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <div className="md:col-span-1">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Enter 6-digit OTP"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                  />
+                </div>
+              </div>
+              {(otpError || otpSuccess) && (
+                <div className="mt-2 text-sm">
+                  {otpError && <div className="text-red-600">{otpError}</div>}
+                  {otpSuccess && <div className="text-green-600">{otpSuccess}</div>}
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isSubmitting || formData.rating === 0}
+              disabled={isSubmitting || formData.rating === 0 || !otpVerified || !formData.photo}
               className={`w-full py-4 rounded-lg font-semibold text-white transition-all duration-200 ${
-                isSubmitting || formData.rating === 0
+                isSubmitting || formData.rating === 0 || !otpVerified || !formData.photo
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl'
               }`}
@@ -320,6 +459,10 @@ const Feedback = () => {
                 </div>
               )}
             </button>
+
+            {formError && (
+              <p className="text-sm text-red-600 text-center mt-2">{formError}</p>
+            )}
 
             <p className="text-xs text-gray-500 text-center">
               ⚡ Takes less than 2 minutes • Your feedback is anonymous
