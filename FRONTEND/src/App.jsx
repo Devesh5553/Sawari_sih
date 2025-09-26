@@ -4,7 +4,6 @@ import MapView from './components/MapView';
 import SearchBar from './components/SearchBar';
 import BusList from './components/BusList';
 import FeatureHighlights from './components/FeatureHighlights';
-import AdminDashboard from './components/AdminDashboard';
 import { Bus, MapPin, Clock, Smartphone, BarChart3, Shield } from 'lucide-react';
 import DeviceMockup from './components/DeviceMockup';
 import { buses as allBuses } from './data/buses';
@@ -158,12 +157,9 @@ function App() {
               </div>
               <BusList buses={displayedBuses} isLoading={isLoading} />
             </div>
-
-            {/* Admin Dashboard */}
-            <AdminDashboard />
           </div>
         </div>
-      </section>
+        </section>
 
       {/* Stats Section */}
       <section className="bg-gray-50 py-16 mt-16">

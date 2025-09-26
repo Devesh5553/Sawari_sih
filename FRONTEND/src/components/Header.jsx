@@ -20,6 +20,7 @@ const Header = () => {
 
           {/* Actions */}
           <div className="hidden md:flex items-center space-x-4 ml-auto">
+            <Link to="/sms" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">SMS</Link>
             <button className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Features</button>
             <button className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Routes</button>
             <button className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">Time Table</button>
