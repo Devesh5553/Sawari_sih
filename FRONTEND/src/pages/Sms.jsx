@@ -58,8 +58,25 @@ const Sms = () => {
   }, [route, allStarts, allDestinations]);
 
   const canSend = route && currentStop && destinationStop && phone && !sending;
+  // Derive ETA from mock buses data: choose the smallest etaMin for matching route/start/destination
+  const etaMin = useMemo(() => {
+    if (!route || !currentStop || !destinationStop) return null;
+    const matches = buses.filter(b => (
+      b.route === route && b.start === currentStop && b.destination === destinationStop && typeof b.etaMin === 'number'
+    ));
+    if (!matches.length) return null;
+    return matches.reduce((min, b) => Math.min(min, b.etaMin), matches[0].etaMin);
+  }, [route, currentStop, destinationStop]);
 
-  const preview = `ETA ${route || '<route>'} ${currentStop || '<current_stop>'} ${destinationStop || '<destination_stop>'}`;
+  const etaTimeStr = useMemo(() => {
+    if (etaMin == null) return '';
+    const d = new Date(Date.now() + etaMin * 60 * 1000);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }, [etaMin]);
+
+  const preview = etaMin != null
+    ? `Bus ${route} from ${currentStop} to ${destinationStop} will arrive in ${etaMin} min (${etaTimeStr}).`
+    : `Bus ${route || '<route>'} from ${currentStop || '<current_stop>'} to ${destinationStop || '<destination_stop>'}`;
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -86,7 +103,8 @@ const Sms = () => {
           route,
           currentStop,
           destinationStop,
-          // eta is optional; omit for now
+          // Provide eta as a string so backend composes the correct message
+          ...(etaMin != null ? { eta: `${etaMin} min` } : {}),
         })
       });
       const data = await res.json();
